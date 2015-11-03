@@ -34,7 +34,6 @@ import string
 import datetime
 import calendar
 import requests
-import time
 
 from flask import Flask, jsonify, abort, request
 
@@ -60,84 +59,27 @@ dbaddress = "127.0.0.1"
 confs = {}
 mobaas_timer = None
 
-
-MIGRATION_INDEX = 0
-## demo variables
-migrationId_demo = MIGRATION_INDEX
-newInfo_demo = False
-currentAction_demo = None
-originCells_demo = None
-movingUsers_demo = None
-destinationCell_demo = None
-destinationUsers_demo = None
-migrationData_demo = None
-migrating_demo = False
-migrationStart_demo = None
-migrationEnd_demo = None
-
-
-class WebServer(threading.Thread):
+class WebServer (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.ioLoop = IOLoop.instance()
         self.app = Flask(__name__)
         self.app.add_url_rule(rule='/icnaas/api/v1.0/fmc_manager', methods=['POST'], view_func=self.groupMigration)
-        self.app.add_url_rule(rule='/icnaas/api/v1.0/fmc_demo_info', methods=['POST'], view_func=self.send_information)
-        self.app.add_url_rule(rule='/icnaas/api/v1.0/fmc_register_mobaas', methods=['POST'], view_func=self.registerMobaas)
 
-    # @self.app.route('/icnaas/api/v1.0/fmc_manager', methods=['POST'])
+    #@self.app.route('/icnaas/api/v1.0/fmc_manager', methods=['POST'])
     def groupMigration(self):
+
         if not request.json or not 'mobility_prediction' in request.json:
             abort(400)
 
         print "Received Migration from MP_MIDDLEWARE"
-        # print json.loads(request.data)
+        #print json.loads(request.data)
 
         mig = Migration()
         code = mig.processMigrationInfo(request.json)
 
         return jsonify({'result': code}), code
-        # return jsonify({'result': 200}), 200
-
-    def send_information(self):
-
-        if not request.json or not 'fmc_info_request' in request.json:
-            abort(400)
-
-        global migrationId_demo, currentAction_demo, originCells_demo, movingUsers_demo, destinationCell_demo, destinationUsers_demo, migrationData_demo, migrating_demo, migrationStart_demo, migrationEnd_demo, newInfo_demo
-
-        msg = jsonify({'migrationId': migrationId_demo,
-                       'currentAction': currentAction_demo,
-                       'originCells': originCells_demo,
-                       'movingUsers': movingUsers_demo,
-                       'destinationCell': destinationCell_demo,
-                       'destinationUsers': destinationUsers_demo,
-                       'migrationData': migrationData_demo,
-                       'migrating': migrating_demo,
-                       'migrationStart': migrationStart_demo,
-                       'migrationEnd': migrationEnd_demo,
-                       'newInfo': newInfo_demo})
-
-        newInfo_demo = False
-
-        return msg, 200
-
-    def registerMobaas(self):
-
-        if not request.json or not 'fmc_register_mobaas' in request.json:
-            abort(400)
-
-        msg = request.json['fmc_register_mobaas']
-
-        url = "http://" + confs["mobaas_ip"] + ":5000/mobaas/api/v1.0/prediction/multi-user"
-        resp = requests.post(url, json={"user_id": 0, "future_time_delta": confs["mobaas_delta"],
-                                    "current_time": msg['time'],
-                                    "current_date": msg['week_day'],
-                                    "reply_url": "http://" + confs[
-                                        "mp_middleware_ip"] + ":6000/icnaas/api/v1.0/multiple_user_predictions"},
-                         timeout=10)
-
-        return resp.text, 200
+        #return jsonify({'result': 200}), 200
 
     def stop(self):
         self.ioLoop.stop()
@@ -148,7 +90,7 @@ class WebServer(threading.Thread):
         self.ioLoop.start()
 
 
-class Monitor(threading.Thread):
+class Monitor (threading.Thread):
     def __init__(self, portNumber):
         threading.Thread.__init__(self)
         self.portNumber = portNumber
@@ -224,7 +166,7 @@ class Monitor(threading.Thread):
             jMsg = json.loads(incMsg)
 
             if jMsg["type"] != 'interestlogmsg':
-                print "Wrong type of message received: " + jMsg[type]
+                print "Wrong type of message received: " +jMsg[type]
                 self.sendReply(conn, 500)
                 conn.close()
                 continue
@@ -374,8 +316,8 @@ class Migration():
 
             rows = dbcur.fetchall()
 
-            # Create dictionary
-            dInt = {a: [int(b, 16), int(c)] for a, b, c in rows}
+            #Create dictionary
+            dInt = {a:[int(b,16),int(c)] for a,b,c in rows}
 
             return dInt
 
@@ -404,16 +346,16 @@ class Migration():
         fDict = dict()
         for key in lKeys:
             for d in dSrcs:
-                if key in fDict:
+		if key in fDict:
                     fDict[key] += d.get(key, 0)
-                else:
-                    fDict[key] = d.get(key, 0)
+		else:
+		    fDict[key] = d.get(key, 0)
 
         return fDict
 
     def getCellRouters(self, cellId):
 
-        url = "http://" + confs["icnaas_ip"] + ":5000/icnaas/api/v1.0/routers/cell/" + str(cellId)
+        url = "http://" + confs["icnaas_ip"] +":5000/icnaas/api/v1.0/routers/cell/" + str(cellId)
 
         out = requests.get(url, timeout=10)
 
@@ -440,7 +382,7 @@ class Migration():
 
         dIntDst = self.getMergedInterests(ipDst, "1 months")
 
-        # Aux Lists
+        #Aux Lists
         auxB = []
         auxC = []
         auxL = []
@@ -454,14 +396,14 @@ class Migration():
         print "Processing 1st Source Interests"
 
         # Adding prefixes requested at 1st source
-        for k, v in dIntSrc[0].items():
+        for k,v in dIntSrc[0].items():
             popDst = dIntDst[k][1] if k in dIntDst else 0
 
             popSrcs = 0
-            for i in range(numCells - 1):
+            for i in range(numCells-1):
                 popSrcs += (dIntSrc[i][k][1] if k in dIntSrc[i] else 0) * movUsers[i]
 
-            popInt = (popSrcs + popDst * dstUsers) / numCells
+            popInt = (popSrcs + popDst*dstUsers) / numCells
 
             ### ID | Populatiry
             auxB.extend([cnt, popInt])
@@ -476,17 +418,17 @@ class Migration():
 
         print "Processing other Sources Interests"
 
-        for j in range(1, numCells - 1):
-            for k, v in dIntSrc[j].items():
+        for j in range(1,numCells-1):
+            for k,v in dIntSrc[j].items():
 
                 if k not in auxL:
                     popSrcs += (dIntSrc[i][k][1] if k in dIntSrc[i] else 0) * movUsers[i]
 
                     popSrcs = 0
-                    for i in range(j, numCells - 1):
+                    for i in range(j, numCells-1):
                         popSrcs += (dIntSrc[i][k][1] if k in dIntSrc[i] else 0) * movUsers[i]
 
-                    popInt = (popSrcs + popDst * dstUsers) / numCells
+                    popInt = (popSrcs + popDst*dstUsers) / numCells
 
                     ### ID | Populatiry
                     auxB.extend([cnt, popInt])
@@ -502,9 +444,9 @@ class Migration():
         print "Processing Destination Interests"
 
         # Adding interests requested at destination still missing
-        for k, v in dIntDst.items():
+        for k,v in dIntDst.items():
             if k not in auxL:
-                popInt = (v[1] * dstUsers) / numCells
+                popInt = (v[1]*dstUsers) / numCells
 
                 ### ID | Populatiry
                 auxB.extend([cnt, popInt])
@@ -526,43 +468,34 @@ class Migration():
         vBen = ro.FloatVector([1.0])
         vCost = ro.FloatVector([1.0])
 
-        output = MADM(mBen, mCost, vBen, vCost, 1)
+        output = MADM(mBen,mCost,vBen,vCost,1)
 
-        if output == -1:
-            return 200
+	if output == -1:
+		return 200
 
-        # print output
+        #print output
 
         outAux = rpyn.ri2numpy(output)
 
-        if outAux[0] == -2:
-            return 200
-        elif outAux[0] == -1:
-            ####### DEMO INFORMATION #######
-            global newInfo_demo, migrationData_demo
-            newInfo_demo = True
-            migrationData_demo = auxL
-            code = self.sendMigrationData(auxL, ipDst)
-            return code
+	if outAux[0] == -2:
+	    return 200
+	elif outAux[0] == -1:
+	    code = self.sendMigrationData(auxL, ipDst)
+	    return code
 
         cacheList = []
         usedCache = 0
 
         for out in outAux:
-            if auxS[int(out[0]) - 1] + usedCache < cacheSize:
-                cacheList.append(auxL[int(out[0] - 1)])
-                usedCache += auxS[int(out[0] - 1)]
+            if auxS[int(out[0])-1] + usedCache < cacheSize:
+                cacheList.append(auxL[int(out[0]-1)])
+                usedCache += auxS[int(out[0]-1)]
 
             if usedCache == cacheSize:
                 break
 
-                # for ent in cacheList:
-                # print ent
-
-        ####### DEMO INFORMATION #######
-        global newInfo_demo, migrationData_demo
-        newInfo_demo = True
-        migrationData_demo = cacheList
+        #for ent in cacheList:
+            #print ent
 
         code = self.sendMigrationData(cacheList, ipDst)
 
@@ -574,12 +507,6 @@ class Migration():
         cacheMsg["names"] = prefixList
 
         cnt = 0
-
-        ####### DEMO INFORMATION #######
-        global newInfo_demo, migrating_demo, migrationStart_demo, migrationEnd_demo
-        newInfo_demo = True
-        migrating_demo = True
-        migrationStart_demo = time.time()
 
         for ip in ipDst:
             while cnt < 3:
@@ -605,12 +532,6 @@ class Migration():
 
                     if int(respMsg['code']) < 400:
                         s.close()
-
-                        ####### DEMO INFORMATION #######
-                        newInfo_demo = True
-                        migrating_demo = False
-                        migrationEnd_demo = time.time()
-
                         return respMsg['code']
 
                     else:
@@ -634,7 +555,7 @@ class Migration():
             cellsSrc.append(ent['cell_id'])
             usersSrc.append(ent['users'])
 
-        # Fetch IPs from ICNaaS based on CellIDs
+        #Fetch IPs from ICNaaS based on CellIDs
         ipsSrc = []
 
         for cell in cellsSrc:
@@ -646,17 +567,6 @@ class Migration():
 
         ipsDst = self.getCellRouters(cellDst)
         if ipsDst is not None:
-
-            ####### DEMO INFORMATION #######
-            global migrationId_demo, newInfo_demo, originCells_demo, movingUsers_demo, destinationCell_demo, destinationUsers_demo
-            migrationId_demo += 1
-            newInfo_demo = True
-            originCells_demo = cellsSrc
-            movingUsers_demo = usersSrc
-            destinationCell_demo = cellDst
-            destinationUsers_demo = usersDst
-
-
             code = self.doMigration(ipsSrc, usersSrc, ipsDst, usersDst)
 
         return code
@@ -679,6 +589,7 @@ def mainFunc(webThread):
             break
 
         if op == 1:
+
             sIpAddress = raw_input("Src IP Address: ")
             dIpAddress = raw_input("Dst IP Address: ")
 
@@ -689,8 +600,8 @@ def mainFunc(webThread):
 
             mig.doMigration([sIpAddress], [movUsers], dIpAddress, dstUsers)
 
+def registerMOBaaS(first = False):
 
-def registerMOBaaS(first=False):
     if first:
         now = datetime.datetime.now()
         tomorrow = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(1)
@@ -706,14 +617,13 @@ def registerMOBaaS(first=False):
     url = "http://" + confs["mobaas_ip"] + ":5000/mobaas/api/v1.0/prediction/multi-user"
     current_time = datetime.datetime.now().strftime('%H:%M')
 
-    resp = requests.post(url, json={"user_id": 0, "future_time_delta": confs["mobaas_delta"],
-                                    "current_time": current_time,
-                                    "current_date": calendar.day_name[datetime.date.today().weekday()],
-                                    "reply_url": "http://" + confs[
-                                        "mp_middleware_ip"] + ":6000/icnaas/api/v1.0/multiple_user_predictions"},
-                         timeout=10)
+    resp = requests.post(url, json={"user_id":0, "future_time_delta": confs["mobaas_delta"],
+                            "current_time":current_time, "current_date": calendar.day_name[datetime.date.today().weekday()],
+                            "reply_url": "http://" + confs["mp_middleware_ip"] + ":6000/icnaas/api/v1.0/multiple_user_predictions"},
+                  timeout=10)
 
     print resp.text
+
 
 
 if __name__ == '__main__':
@@ -722,12 +632,12 @@ if __name__ == '__main__':
         for line in opts.readlines():
             confs[line.split('=')[0]] = line.split('=')[1][:-1]
 
-    monThread = Monitor(port + 5)
+    monThread = Monitor(port+5)
     monThread.start()
 
     webThread = WebServer()
     webThread.start()
 
-    #threading.Timer(5, registerMOBaaS, [True]).start()
+    threading.Timer(5,registerMOBaaS,[True]).start()
 
-    # mainFunc(webThread)
+    #mainFunc(webThread)
