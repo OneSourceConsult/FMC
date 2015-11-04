@@ -13,7 +13,7 @@ FMC has been tested and deployed in Information Centric Networking (ICN) service
 ##Copyright
 Copyright (c) 2015 OneSource Consultoria Informatica, Lda. [🔗](http://www.onesource.pt)
 
-This project has been developed in the scope of the MobileCloud Networking project[🔗](http://mobile-cloud-networking.eu) by Vitor Fonseca, André Gomes, David Palma, Bruno Sousa and Luis Cordeiro.
+This project has been developed in the scope of the MobileCloud Networking project[🔗](http://mobile-cloud-networking.eu) by Vitor Fonseca, Claudio Marques, André Gomes, David Palma, Bruno Sousa and Luis Cordeiro.
 
 ##License
 Distributed under the Apache 2 license. See ``LICENSE.txt`` for more information.
